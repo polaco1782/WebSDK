@@ -1,27 +1,56 @@
 #include "websdk.h"
+#include "backend.h"
+#include <thread>
+#include <functional>
 
-static void on_resource_load (WebKitWebView *web_view, WebKitWebResource *resource, WebKitURIRequest *request, void *thisclass)
+static void on_resource_load(WebKitWebView *web_view, WebKitWebResource *resource, WebKitURIRequest *request, void *thisclass)
 {
-    cout <<  webkit_uri_request_get_uri(request) << endl;
+    cout << webkit_uri_request_get_uri(request) << endl;
 }
 
 static void on_script_rpc(WebKitUserContentManager *manager, WebKitJavascriptResult *message, void *thisclass)
 {
     auto *cwebview = reinterpret_cast<CWebView *>(thisclass);
-
     auto *msg = webkit_javascript_result_get_js_value(message);
-    char *value = jsc_value_to_string(msg);
+    char *value = strdup(jsc_value_to_string(msg));
 
-    cwebview->jsexec_async("test_callback('Retorno do WebKit OK: "+string(value)+"')");
+    thread([cwebview, value]
+    {
+        auto j = json::parse(value);
+
+        if(!j.empty())
+        {
+
+        }
+
+        free(value);
+    }).detach();
+
+    // for(int i=0; i<10; i++)
+    //     cwebview->jsexec_async("window.postMessage('teste','*')");
+
+    // if(!j.empty())
+    // {
+    //     stringstream s;
+    //     s << j["callback"].get<string>() << "('" << "tabaco" << "')";
+
+    //     cout << "Callback recebido: " << s.str() << endl;
+
+    //     for(int i=0; i<10; i++)
+    //     {
+    //         cout << "Running....." << endl;
+
+    //         cwebview->jsexec_async(s.str());
+    //         sleep(1);
+    //     }
+    // }
 }
 
 void WebSDK::install_handlers()
 {
-    cwebview->jsexec_async("alert('teste de evento gerado no webkit')");
-
     // evento de load de cada arquivo
     cwebview->connect("resource-load-started", G_CALLBACK(on_resource_load));
- 
+
     // registra no webkit o metodo RPC
     cwebview->register_message("jsonRPC", G_CALLBACK(on_script_rpc));
 }
@@ -46,4 +75,8 @@ WebSDK::WebSDK()
 
     install_handlers();
     load_index();
+
+    cwebview->show_inspector();
+
+    JSBackEnd *j = new JSBackEnd();
 }

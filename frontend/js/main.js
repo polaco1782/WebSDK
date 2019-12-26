@@ -1,15 +1,22 @@
-$(function() {
-    $('button').on('click', function() {
-        let data = [];
+function SendRPC(method, callback, params)
+{
+    let data = { 'jsonrpc': '2.0',
+                 'method': method,
+                 'callback': callback,
+                 'params': params,
+                 'id': Math.random().toString(36).substr(2, 9) };
 
-        data.push({'id': 1234});
-        data.push({'method': 'test'});
-
-        // envia o RPC pelo handler do webkit
-        window.webkit.messageHandlers.jsonRPC.postMessage(JSON.stringify(data));
-    });
-});
-
-function test_callback(params) {
-    $('#retorno').html(params);
+    window.webkit.messageHandlers.jsonRPC.postMessage(JSON.stringify(data));
 }
+
+function test()
+{
+    SendRPC('xxx', 'yyy', [1,2,3,4,5]);
+}
+
+window.addEventListener("message", function(event)
+{
+    console.log(event.data);
+    //alert( "received: " + event.data );
+    // can message back using event.source.postMessage(...)
+});

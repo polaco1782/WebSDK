@@ -7,7 +7,10 @@
 	"settings": {
 		"files.associations": {
 			"iostream": "cpp",
-			"filesystem": "cpp"
+			"filesystem": "cpp",
+			"ostream": "cpp",
+			"future": "cpp",
+			"string": "cpp"
 		}
 	}
 }
