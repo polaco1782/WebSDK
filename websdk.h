@@ -58,7 +58,7 @@ class CWebView : public Widget
             return FALSE;
         }, args);
     }
-    
+
     WebKitJavascriptResult *jsexec_sync() {}
 
     // registra o handler de evento no webkit
@@ -103,6 +103,8 @@ class WebSDK : public Window
 
     void load_index();
     void install_handlers();
+
+    static void on_resource_load(WebKitWebView *web_view, WebKitWebResource *resource, WebKitURIRequest *request, void *thisclass);
 };
 
 #endif

@@ -1,3 +1,4 @@
+// enviar request RPC para o middleware
 function SendRPC(method, callback, params)
 {
     let data = { 'jsonrpc': '2.0',
@@ -14,9 +15,10 @@ function test()
     SendRPC('xxx', 'yyy', [1,2,3,4,5]);
 }
 
+// retorno da resposta RPC será no EventListener
 window.addEventListener("message", function(event)
 {
-    console.log(event.data);
+    alert(event.data);
     //alert( "received: " + event.data );
     // can message back using event.source.postMessage(...)
 });

@@ -10,7 +10,7 @@ MUJS=-Lmujs/build/release -lmujs
 
 EXE=main
 
-all: $(EXE)
+all: mujs $(EXE)
 
 $(EXE) : $(OBJ)
 	$(CC) $(OBJ) -o $@ $(WEBKITGTK) $(GTKMM) $(GTK) $(MUJS) -lstdc++fs
@@ -22,6 +22,7 @@ $(EXE) : $(OBJ)
 
 mujs:
 	$(MAKE) -C $(MUJS_DIR) static
+
 clean:
 	rm *.o $(EXE)
 	$(MAKE) -C $(MUJS_DIR) clean

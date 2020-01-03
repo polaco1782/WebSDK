@@ -3,11 +3,6 @@
 #include <thread>
 #include <functional>
 
-static void on_resource_load(WebKitWebView *web_view, WebKitWebResource *resource, WebKitURIRequest *request, void *thisclass)
-{
-    cout << webkit_uri_request_get_uri(request) << endl;
-}
-
 static void on_script_rpc(WebKitUserContentManager *manager, WebKitJavascriptResult *message, void *thisclass)
 {
     auto *cwebview = reinterpret_cast<CWebView *>(thisclass);
@@ -20,7 +15,10 @@ static void on_script_rpc(WebKitUserContentManager *manager, WebKitJavascriptRes
 
         if(!j.empty())
         {
+            string cmd = j["method"].get<string>();
 
+            cout << cmd << endl;
+            cwebview->jsexec_async("window.postMessage('teste','*')"); 
         }
 
         free(value);
@@ -44,6 +42,11 @@ static void on_script_rpc(WebKitUserContentManager *manager, WebKitJavascriptRes
     //         sleep(1);
     //     }
     // }
+}
+
+void WebSDK::on_resource_load(WebKitWebView *web_view, WebKitWebResource *resource, WebKitURIRequest *request, void *thisclass)
+{
+    cout << webkit_uri_request_get_uri(request) << endl;
 }
 
 void WebSDK::install_handlers()
