@@ -14,6 +14,7 @@ all: mujs $(EXE)
 
 $(EXE) : $(OBJ)
 	$(CC) $(OBJ) -o $@ $(WEBKITGTK) $(GTKMM) $(GTK) $(MUJS) -lstdc++fs
+	mv $(EXE) ../$(EXE)
 
 .cpp.o:
 	$(CC) -c $< -o $@ $(WEBKITGTK) $(GTKMM) $(GTK)
@@ -24,5 +25,10 @@ mujs:
 	$(MAKE) -C $(MUJS_DIR) static
 
 clean:
-	rm *.o $(EXE)
+	rm *.o ../$(EXE)
 	$(MAKE) -C $(MUJS_DIR) clean
+
+run:
+	make all
+	cd ..; \
+	./$(EXE)
