@@ -15,33 +15,24 @@ static void on_script_rpc(WebKitUserContentManager *manager, WebKitJavascriptRes
 
         if(!j.empty())
         {
-            string cmd = j["method"].get<string>();
+            string m = j.value("method", "");
+            string c = j.value("callback", "");
+            string p = j.value("params", "");
 
-            cout << cmd << endl;
-            cwebview->jsexec_async("window.postMessage('teste','*')"); 
+            cout << "Metodo recebido: " << m << endl;
+            cout << "Callback recebido: " << c << endl;
+            cout << "Parametros recebido: " << p << endl;
+            //cwebview->jsexec_async("window.postMessage('teste','*')"); 
+
+            if(m == "execjs")
+            {
+                JSBackEnd *js = new JSBackEnd();
+                js->mujs_execute("teste_backend(\"teste js!\")");
+            }
         }
 
         free(value);
     }).detach();
-
-    // for(int i=0; i<10; i++)
-    //     cwebview->jsexec_async("window.postMessage('teste','*')");
-
-    // if(!j.empty())
-    // {
-    //     stringstream s;
-    //     s << j["callback"].get<string>() << "('" << "tabaco" << "')";
-
-    //     cout << "Callback recebido: " << s.str() << endl;
-
-    //     for(int i=0; i<10; i++)
-    //     {
-    //         cout << "Running....." << endl;
-
-    //         cwebview->jsexec_async(s.str());
-    //         sleep(1);
-    //     }
-    // }
 }
 
 void WebSDK::on_resource_load(WebKitWebView *web_view, WebKitWebResource *resource, WebKitURIRequest *request, void *thisclass)
@@ -79,7 +70,6 @@ WebSDK::WebSDK()
     install_handlers();
     load_index();
 
+    // modo dev
     cwebview->show_inspector();
-
-    JSBackEnd *j = new JSBackEnd();
 }

@@ -14,7 +14,7 @@ class JSBackEnd
     JSBackEnd();
     ~JSBackEnd();
 
-    static void js_print(js_State *J);
+    void mujs_execute(string js);
 };
 
 
