@@ -38,14 +38,14 @@
 #include <boost/optional.hpp>
 #endif
 
-#include "sqlite3.h"
-#include "errors.h"
-#include "utility/function_traits.h"
-#include "utility/uncaught_exceptions.h"
-#include "utility/utf16_utf8.h"
+#include "sqlite3/sqlite3.h"
+#include "sqlite3/errors.h"
+#include "sqlite3/utility/function_traits.h"
+#include "sqlite3/utility/uncaught_exceptions.h"
+#include "sqlite3/utility/utf16_utf8.h"
 
 #ifdef MODERN_SQLITE_STD_VARIANT_SUPPORT
-#include "utility/variant.h"
+#include "sqlite3/utility/variant.h"
 #endif
 
 namespace sqlite {
