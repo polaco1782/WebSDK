@@ -103,6 +103,7 @@ class WebSDK : public Window
 
     void load_index();
     void install_handlers();
+    void httpserver_run();
 
     static void on_resource_load(WebKitWebView *web_view, WebKitWebResource *resource, WebKitURIRequest *request, void *thisclass);
 };

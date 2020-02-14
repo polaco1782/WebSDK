@@ -14,7 +14,7 @@ EXE=main
 all: mujs $(EXE)
 
 $(EXE) : $(OBJ)
-	$(CC) $(OBJ) sqlite3/sqlite3.o -o $@ $(WEBKITGTK) $(GTKMM) $(GTK) $(MUJS) -lstdc++fs -ldl
+	$(CC) $(OBJ) sqlite3/sqlite3.o -o $@ $(WEBKITGTK) $(GTKMM) $(GTK) $(MUJS) -lboost_system -lstdc++fs -ldl
 	mv $(EXE) ../$(EXE)
 
 .cpp.o:

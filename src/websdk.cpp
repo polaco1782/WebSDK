@@ -1,5 +1,6 @@
 #include "websdk.h"
 #include "backend.h"
+#include "crow_all.h"
 #include <thread>
 #include <functional>
 
@@ -61,15 +62,33 @@ void WebSDK::load_index()
     cwebview->load_html(html, absname);
 }
 
+void WebSDK::httpserver_run()
+{
+    thread([cwebview]
+    {
+        crow::SimpleApp app;
+
+        CROW_ROUTE(app, "/<int>")([](int x)
+        {
+            return "Hello world " + to_string(x);
+
+        });
+
+        app.port(8080).run();
+    }).detach();
+}
+
 WebSDK::WebSDK()
 {
     set_default_size(1024, 600);
     add(*cwebview);
     show_all();
 
+    httpserver_run();
     install_handlers();
     load_index();
 
     // modo dev
     cwebview->show_inspector();
+
 }
