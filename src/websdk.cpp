@@ -7,31 +7,11 @@ static void on_script_rpc(WebKitUserContentManager *manager, WebKitJavascriptRes
 {
     auto *cwebview = reinterpret_cast<CWebView *>(thisclass);
     auto *msg = webkit_javascript_result_get_js_value(message);
-    char *value = strdup(jsc_value_to_string(msg));
+    auto value = string(jsc_value_to_string(msg));
 
-    thread([cwebview, value]
-    {
-        auto x = crow::json::load(value);
-
-        if(!!x)
-        {
-            string m = x["method"].s();
-            string c = x["callback"].s();
-            string p = x["params"].s();
-
-            cout << "Metodo recebido: " << m << endl;
-            cout << "Callback recebido: " << c << endl;
-            cout << "Parametros recebido: " << p << endl;
-            //cwebview->jsexec_async("window.postMessage('teste','*')"); 
-
-            if(m == "execjs")
-            {
-                JSBackEnd *js = new JSBackEnd();
-                js->mujs_execute("teste_backend(\"teste js!\")");
-            }
-        }
-
-        free(value);
+    thread([cwebview,value]{
+        auto v1 = value;
+        cwebview->process_request(v1);
     }).detach();
 }
 
@@ -67,10 +47,10 @@ void WebSDK::httpserver_run()
     {
         crow::SimpleApp app;
 
-        CROW_ROUTE(app, "/<int>")([this](int x)
+        CROW_ROUTE(app, "/json_post").methods("POST"_method)
+        ([this](const crow::request& req)
         {
-            cwebview->jsexec_async("alert('bumbou')");
-            return "Hello world " + to_string(x);
+            return cwebview->process_request(req.body);
         });
 
         app.port(8080).run();
@@ -89,5 +69,4 @@ WebSDK::WebSDK()
 
     // modo dev
     cwebview->show_inspector();
-
 }

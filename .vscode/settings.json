@@ -12,6 +12,7 @@
         "variant": "cpp",
         "stdexcept": "cpp",
         "cstring": "cpp",
-        "optional": "cpp"
+        "optional": "cpp",
+        "*.ipp": "cpp"
     }
 }
