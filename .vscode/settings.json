@@ -11,6 +11,7 @@
         "utility": "cpp",
         "variant": "cpp",
         "stdexcept": "cpp",
-        "cstring": "cpp"
+        "cstring": "cpp",
+        "optional": "cpp"
     }
 }

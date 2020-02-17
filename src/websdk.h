@@ -1,7 +1,7 @@
 #ifndef WEBSDK_H
 #define WEBSDK_H
 
-#include "json.hpp"
+#include "crow_all.h"
 #include <filesystem>
 #include <fstream>
 #include <gtkmm.h>
@@ -14,7 +14,6 @@ namespace fs = std::filesystem;
 using namespace std;
 using namespace Gtk;
 using namespace Glib;
-using namespace nlohmann;
 
 struct jsdata
 {
@@ -59,7 +58,7 @@ class CWebView : public Widget
         }, args);
     }
 
-    WebKitJavascriptResult *jsexec_sync() {}
+    WebKitJavascriptResult *jsexec_sync() { return NULL; }
 
     // registra o handler de evento no webkit
     void register_message(const string &handler, GCallback callback)

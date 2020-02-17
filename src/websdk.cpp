@@ -1,6 +1,5 @@
 #include "websdk.h"
 #include "backend.h"
-#include "crow_all.h"
 #include <thread>
 #include <functional>
 
@@ -12,13 +11,13 @@ static void on_script_rpc(WebKitUserContentManager *manager, WebKitJavascriptRes
 
     thread([cwebview, value]
     {
-        auto j = json::parse(value);
+        auto x = crow::json::load(value);
 
-        if(!j.empty())
+        if(!!x)
         {
-            string m = j.value("method", "");
-            string c = j.value("callback", "");
-            string p = j.value("params", "");
+            string m = x["method"].s();
+            string c = x["callback"].s();
+            string p = x["params"].s();
 
             cout << "Metodo recebido: " << m << endl;
             cout << "Callback recebido: " << c << endl;
@@ -64,14 +63,14 @@ void WebSDK::load_index()
 
 void WebSDK::httpserver_run()
 {
-    thread([cwebview]
+    thread([this]
     {
         crow::SimpleApp app;
 
-        CROW_ROUTE(app, "/<int>")([](int x)
+        CROW_ROUTE(app, "/<int>")([this](int x)
         {
+            cwebview->jsexec_async("alert('bumbou')");
             return "Hello world " + to_string(x);
-
         });
 
         app.port(8080).run();

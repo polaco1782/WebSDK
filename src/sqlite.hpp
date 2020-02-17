@@ -38,15 +38,474 @@
 #include <boost/optional.hpp>
 #endif
 
-#include "sqlite3/sqlite3.h"
-#include "sqlite3/errors.h"
-#include "sqlite3/utility/function_traits.h"
-#include "sqlite3/utility/uncaught_exceptions.h"
-#include "sqlite3/utility/utf16_utf8.h"
+#include <sqlite3.h>
+#include <string>
+#include <stdexcept>
 
-#ifdef MODERN_SQLITE_STD_VARIANT_SUPPORT
-#include "sqlite3/utility/variant.h"
+#include "sqlite3.h"
+
+namespace sqlite {
+
+	class sqlite_exception: public std::runtime_error {
+	public:
+		sqlite_exception(const char* msg, std::string sql, int code = -1): runtime_error(msg), code(code), sql(sql) {}
+		sqlite_exception(int code, std::string sql): runtime_error(sqlite3_errstr(code)), code(code), sql(sql) {}
+		int get_code() const {return code & 0xFF;}
+		int get_extended_code() const {return code;}
+		std::string get_sql() const {return sql;}
+	private:
+		int code;
+		std::string sql;
+	};
+
+	namespace errors {
+		//One more or less trivial derived error class for each SQLITE error.
+		//Note the following are not errors so have no classes:
+		//SQLITE_OK, SQLITE_NOTICE, SQLITE_WARNING, SQLITE_ROW, SQLITE_DONE
+		//
+		//Note these names are exact matches to the names of the SQLITE error codes.
+#define SQLITE_MODERN_CPP_ERROR_CODE(NAME,name,derived) \
+		class name: public sqlite_exception { using sqlite_exception::sqlite_exception; };\
+		derived
+#define SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(BASE,SUB,base,sub) \
+		class base ## _ ## sub: public base { using base::base; };
+
+#if SQLITE_VERSION_NUMBER < 3010000
+#define SQLITE_IOERR_VNODE (SQLITE_IOERR | (27<<8))
+#define SQLITE_IOERR_AUTH (SQLITE_IOERR | (28<<8))
+#define SQLITE_AUTH_USER (SQLITE_AUTH | (1<<8))
 #endif
+SQLITE_MODERN_CPP_ERROR_CODE(ERROR,error,)
+SQLITE_MODERN_CPP_ERROR_CODE(INTERNAL,internal,)
+SQLITE_MODERN_CPP_ERROR_CODE(PERM,perm,)
+SQLITE_MODERN_CPP_ERROR_CODE(ABORT,abort,
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(ABORT,ROLLBACK,abort,rollback)
+)
+SQLITE_MODERN_CPP_ERROR_CODE(BUSY,busy,
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(BUSY,RECOVERY,busy,recovery)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(BUSY,SNAPSHOT,busy,snapshot)
+)
+SQLITE_MODERN_CPP_ERROR_CODE(LOCKED,locked,
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(LOCKED,SHAREDCACHE,locked,sharedcache)
+)
+SQLITE_MODERN_CPP_ERROR_CODE(NOMEM,nomem,)
+SQLITE_MODERN_CPP_ERROR_CODE(READONLY,readonly,)
+SQLITE_MODERN_CPP_ERROR_CODE(INTERRUPT,interrupt,)
+SQLITE_MODERN_CPP_ERROR_CODE(IOERR,ioerr,
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,READ,ioerr,read)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,SHORT_READ,ioerr,short_read)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,WRITE,ioerr,write)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,FSYNC,ioerr,fsync)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,DIR_FSYNC,ioerr,dir_fsync)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,TRUNCATE,ioerr,truncate)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,FSTAT,ioerr,fstat)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,UNLOCK,ioerr,unlock)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,RDLOCK,ioerr,rdlock)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,DELETE,ioerr,delete)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,BLOCKED,ioerr,blocked)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,NOMEM,ioerr,nomem)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,ACCESS,ioerr,access)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,CHECKRESERVEDLOCK,ioerr,checkreservedlock)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,LOCK,ioerr,lock)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,CLOSE,ioerr,close)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,DIR_CLOSE,ioerr,dir_close)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,SHMOPEN,ioerr,shmopen)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,SHMSIZE,ioerr,shmsize)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,SHMLOCK,ioerr,shmlock)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,SHMMAP,ioerr,shmmap)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,SEEK,ioerr,seek)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,DELETE_NOENT,ioerr,delete_noent)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,MMAP,ioerr,mmap)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,GETTEMPPATH,ioerr,gettemppath)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,CONVPATH,ioerr,convpath)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,VNODE,ioerr,vnode)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(IOERR,AUTH,ioerr,auth)
+)
+SQLITE_MODERN_CPP_ERROR_CODE(CORRUPT,corrupt,
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CORRUPT,VTAB,corrupt,vtab)
+)
+SQLITE_MODERN_CPP_ERROR_CODE(NOTFOUND,notfound,)
+SQLITE_MODERN_CPP_ERROR_CODE(FULL,full,)
+SQLITE_MODERN_CPP_ERROR_CODE(CANTOPEN,cantopen,
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CANTOPEN,NOTEMPDIR,cantopen,notempdir)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CANTOPEN,ISDIR,cantopen,isdir)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CANTOPEN,FULLPATH,cantopen,fullpath)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CANTOPEN,CONVPATH,cantopen,convpath)
+)
+SQLITE_MODERN_CPP_ERROR_CODE(PROTOCOL,protocol,)
+SQLITE_MODERN_CPP_ERROR_CODE(EMPTY,empty,)
+SQLITE_MODERN_CPP_ERROR_CODE(SCHEMA,schema,)
+SQLITE_MODERN_CPP_ERROR_CODE(TOOBIG,toobig,)
+SQLITE_MODERN_CPP_ERROR_CODE(CONSTRAINT,constraint,
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CONSTRAINT,CHECK,constraint,check)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CONSTRAINT,COMMITHOOK,constraint,commithook)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CONSTRAINT,FOREIGNKEY,constraint,foreignkey)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CONSTRAINT,FUNCTION,constraint,function)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CONSTRAINT,NOTNULL,constraint,notnull)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CONSTRAINT,PRIMARYKEY,constraint,primarykey)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CONSTRAINT,TRIGGER,constraint,trigger)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CONSTRAINT,UNIQUE,constraint,unique)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CONSTRAINT,VTAB,constraint,vtab)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(CONSTRAINT,ROWID,constraint,rowid)
+)
+SQLITE_MODERN_CPP_ERROR_CODE(MISMATCH,mismatch,)
+SQLITE_MODERN_CPP_ERROR_CODE(MISUSE,misuse,)
+SQLITE_MODERN_CPP_ERROR_CODE(NOLFS,nolfs,)
+SQLITE_MODERN_CPP_ERROR_CODE(AUTH,auth,
+)
+SQLITE_MODERN_CPP_ERROR_CODE(FORMAT,format,)
+SQLITE_MODERN_CPP_ERROR_CODE(RANGE,range,)
+SQLITE_MODERN_CPP_ERROR_CODE(NOTADB,notadb,)
+SQLITE_MODERN_CPP_ERROR_CODE(NOTICE,notice,
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(NOTICE,RECOVER_WAL,notice,recover_wal)
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(NOTICE,RECOVER_ROLLBACK,notice,recover_rollback)
+)
+SQLITE_MODERN_CPP_ERROR_CODE(WARNING,warning,
+  SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(WARNING,AUTOINDEX,warning,autoindex)
+)
+
+
+#undef SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED
+#undef SQLITE_MODERN_CPP_ERROR_CODE
+
+		//Some additional errors are here for the C++ interface
+		class more_rows: public sqlite_exception { using sqlite_exception::sqlite_exception; };
+		class no_rows: public sqlite_exception { using sqlite_exception::sqlite_exception; };
+		class more_statements: public sqlite_exception { using sqlite_exception::sqlite_exception; }; // Prepared statements can only contain one statement
+		class invalid_utf16: public sqlite_exception { using sqlite_exception::sqlite_exception; };
+
+		static void throw_sqlite_error(const int& error_code, const std::string &sql = "") {
+			switch(error_code & 0xFF) {
+#define SQLITE_MODERN_CPP_ERROR_CODE(NAME,name,derived)     \
+				case SQLITE_ ## NAME: switch(error_code) {          \
+					derived                                           \
+					default: throw name(error_code, sql); \
+				}
+#define SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED(BASE,SUB,base,sub) \
+					case SQLITE_ ## BASE ## _ ## SUB: throw base ## _ ## sub(error_code, sql);
+#undef SQLITE_MODERN_CPP_ERROR_CODE_EXTENDED
+#undef SQLITE_MODERN_CPP_ERROR_CODE
+				default: throw sqlite_exception(error_code, sql);
+			}
+		}
+	}
+	namespace exceptions = errors;
+}
+
+#include <tuple>
+#include <type_traits>
+
+namespace sqlite {
+	namespace utility {
+
+		template<typename> struct function_traits;
+
+		template <typename Function>
+		struct function_traits : public function_traits<
+			decltype(&std::remove_reference<Function>::type::operator())
+		> { };
+
+		template <
+			typename    ClassType,
+			typename    ReturnType,
+			typename... Arguments
+		>
+		struct function_traits<
+			ReturnType(ClassType::*)(Arguments...) const
+		> : function_traits<ReturnType(*)(Arguments...)> { };
+
+    /* support the non-const operator ()
+     * this will work with user defined functors */
+		template <
+			typename    ClassType,
+			typename    ReturnType,
+			typename... Arguments
+		>
+		struct function_traits<
+			ReturnType(ClassType::*)(Arguments...)
+		> : function_traits<ReturnType(*)(Arguments...)> { };
+
+		template <
+			typename    ReturnType,
+			typename... Arguments
+		>
+		struct function_traits<
+			ReturnType(*)(Arguments...)
+		> {
+			typedef ReturnType result_type;
+
+			template <std::size_t Index>
+			using argument = typename std::tuple_element<
+				Index,
+				std::tuple<Arguments...>
+			>::type;
+
+			static const std::size_t arity = sizeof...(Arguments);
+		};
+
+	}
+}
+
+
+#include <cassert>
+#include <exception>
+#include <iostream>
+
+namespace sqlite {
+	namespace utility {
+#ifdef __cpp_lib_uncaught_exceptions
+		class UncaughtExceptionDetector {
+		public:
+			operator bool() {
+				return count != std::uncaught_exceptions();
+			}
+		private:
+			int count = std::uncaught_exceptions();
+		};
+#else
+		class UncaughtExceptionDetector {
+		public:
+			operator bool() {
+				return std::uncaught_exception();
+			}
+		};
+#endif
+	}
+}
+
+namespace sqlite {
+	namespace utility {
+		inline std::string utf16_to_utf8(const std::u16string &input) {
+			struct : std::codecvt<char16_t, char, std::mbstate_t> {
+			} codecvt;
+			std::mbstate_t state{};
+			std::string result((std::max)(input.size() * 3 / 2, std::size_t(4)), '\0');
+			const char16_t *remaining_input = input.data();
+			std::size_t produced_output = 0;
+			while(true) {
+				char *used_output;
+				switch(codecvt.out(state, remaining_input, &input[input.size()],
+				                   remaining_input, &result[produced_output],
+				                   &result[result.size() - 1] + 1, used_output)) {
+				case std::codecvt_base::ok:
+					result.resize(used_output - result.data());
+					return result;
+				case std::codecvt_base::noconv:
+					// This should be unreachable
+				case std::codecvt_base::error:
+					throw errors::invalid_utf16("Invalid UTF-16 input", "");
+				case std::codecvt_base::partial:
+					if(used_output == result.data() + produced_output)
+						throw errors::invalid_utf16("Unexpected end of input", "");
+					produced_output = used_output - result.data();
+					result.resize(
+							result.size()
+							+ (std::max)((&input[input.size()] - remaining_input) * 3 / 2,
+							           std::ptrdiff_t(4)));
+				}
+			}
+		}
+	} // namespace utility
+} // namespace sqlite
+
+
+#include <optional>
+#include <variant>
+
+namespace sqlite::utility {
+	template<typename ...Options>
+	struct VariantFirstNullable {
+		using type = void;
+	};
+	template<typename T, typename ...Options>
+	struct VariantFirstNullable<T, Options...> {
+		using type = typename VariantFirstNullable<Options...>::type;
+	};
+#ifdef MODERN_SQLITE_STD_OPTIONAL_SUPPORT
+	template<typename T, typename ...Options>
+	struct VariantFirstNullable<std::optional<T>, Options...> {
+		using type = std::optional<T>;
+	};
+#endif
+	template<typename T, typename ...Options>
+	struct VariantFirstNullable<std::unique_ptr<T>, Options...> {
+		using type = std::unique_ptr<T>;
+	};
+	template<typename ...Options>
+	struct VariantFirstNullable<std::nullptr_t, Options...> {
+		using type = std::nullptr_t;
+	};
+	template<typename Callback, typename ...Options>
+	inline void variant_select_null(Callback&&callback) {
+		if constexpr(std::is_same_v<typename VariantFirstNullable<Options...>::type, void>) {
+			throw errors::mismatch("NULL is unsupported by this variant.", "", SQLITE_MISMATCH);
+		} else {
+			std::forward<Callback>(callback)(typename VariantFirstNullable<Options...>::type());
+		}
+	}
+
+	template<typename ...Options>
+	struct VariantFirstIntegerable {
+		using type = void;
+	};
+	template<typename T, typename ...Options>
+	struct VariantFirstIntegerable<T, Options...> {
+		using type = typename VariantFirstIntegerable<Options...>::type;
+	};
+#ifdef MODERN_SQLITE_STD_OPTIONAL_SUPPORT
+	template<typename T, typename ...Options>
+	struct VariantFirstIntegerable<std::optional<T>, Options...> {
+		using type = std::conditional_t<std::is_same_v<typename VariantFirstIntegerable<T, Options...>::type, T>, std::optional<T>, typename VariantFirstIntegerable<Options...>::type>;
+	};
+#endif
+	template<typename T, typename ...Options>
+	struct VariantFirstIntegerable<std::enable_if_t<std::is_same_v<typename VariantFirstIntegerable<T, Options...>::type, T>>, std::unique_ptr<T>, Options...> {
+		using type = std::conditional_t<std::is_same_v<typename VariantFirstIntegerable<T, Options...>::type, T>, std::unique_ptr<T>, typename VariantFirstIntegerable<Options...>::type>;
+	};
+	template<typename ...Options>
+	struct VariantFirstIntegerable<int, Options...> {
+		using type = int;
+	};
+	template<typename ...Options>
+	struct VariantFirstIntegerable<sqlite_int64, Options...> {
+		using type = sqlite_int64;
+	};
+	template<typename Callback, typename ...Options>
+	inline auto variant_select_integer(Callback&&callback) {
+		if constexpr(std::is_same_v<typename VariantFirstIntegerable<Options...>::type, void>) {
+			throw errors::mismatch("Integer is unsupported by this variant.", "", SQLITE_MISMATCH);
+		} else {
+			std::forward<Callback>(callback)(typename VariantFirstIntegerable<Options...>::type());
+		}
+	}
+
+	template<typename ...Options>
+	struct VariantFirstFloatable {
+		using type = void;
+	};
+	template<typename T, typename ...Options>
+	struct VariantFirstFloatable<T, Options...> {
+		using type = typename VariantFirstFloatable<Options...>::type;
+	};
+#ifdef MODERN_SQLITE_STD_OPTIONAL_SUPPORT
+	template<typename T, typename ...Options>
+	struct VariantFirstFloatable<std::optional<T>, Options...> {
+		using type = std::conditional_t<std::is_same_v<typename VariantFirstFloatable<T, Options...>::type, T>, std::optional<T>, typename VariantFirstFloatable<Options...>::type>;
+	};
+#endif
+	template<typename T, typename ...Options>
+	struct VariantFirstFloatable<std::unique_ptr<T>, Options...> {
+		using type = std::conditional_t<std::is_same_v<typename VariantFirstFloatable<T, Options...>::type, T>, std::unique_ptr<T>, typename VariantFirstFloatable<Options...>::type>;
+	};
+	template<typename ...Options>
+	struct VariantFirstFloatable<float, Options...> {
+		using type = float;
+	};
+	template<typename ...Options>
+	struct VariantFirstFloatable<double, Options...> {
+		using type = double;
+	};
+	template<typename Callback, typename ...Options>
+	inline auto variant_select_float(Callback&&callback) {
+		if constexpr(std::is_same_v<typename VariantFirstFloatable<Options...>::type, void>) {
+			throw errors::mismatch("Real is unsupported by this variant.", "", SQLITE_MISMATCH);
+		} else {
+			std::forward<Callback>(callback)(typename VariantFirstFloatable<Options...>::type());
+		}
+	}
+
+	template<typename ...Options>
+	struct VariantFirstTextable {
+		using type = void;
+	};
+	template<typename T, typename ...Options>
+	struct VariantFirstTextable<T, Options...> {
+		using type = typename VariantFirstTextable<void, Options...>::type;
+	};
+#ifdef MODERN_SQLITE_STD_OPTIONAL_SUPPORT
+	template<typename T, typename ...Options>
+	struct VariantFirstTextable<std::optional<T>, Options...> {
+		using type = std::conditional_t<std::is_same_v<typename VariantFirstTextable<T, Options...>::type, T>, std::optional<T>, typename VariantFirstTextable<Options...>::type>;
+	};
+#endif
+	template<typename T, typename ...Options>
+	struct VariantFirstTextable<std::unique_ptr<T>, Options...> {
+		using type = std::conditional_t<std::is_same_v<typename VariantFirstTextable<T, Options...>::type, T>, std::unique_ptr<T>, typename VariantFirstTextable<Options...>::type>;
+	};
+	template<typename ...Options>
+	struct VariantFirstTextable<std::string, Options...> {
+		using type = std::string;
+	};
+	template<typename ...Options>
+	struct VariantFirstTextable<std::u16string, Options...> {
+		using type = std::u16string;
+	};
+	template<typename Callback, typename ...Options>
+	inline void variant_select_text(Callback&&callback) {
+		if constexpr(std::is_same_v<typename VariantFirstTextable<Options...>::type, void>) {
+			throw errors::mismatch("Text is unsupported by this variant.", "", SQLITE_MISMATCH);
+		} else {
+			std::forward<Callback>(callback)(typename VariantFirstTextable<Options...>::type());
+		}
+	}
+
+	template<typename ...Options>
+	struct VariantFirstBlobable {
+		using type = void;
+	};
+	template<typename T, typename ...Options>
+	struct VariantFirstBlobable<T, Options...> {
+		using type = typename VariantFirstBlobable<Options...>::type;
+	};
+#ifdef MODERN_SQLITE_STD_OPTIONAL_SUPPORT
+	template<typename T, typename ...Options>
+	struct VariantFirstBlobable<std::optional<T>, Options...> {
+		using type = std::conditional_t<std::is_same_v<typename VariantFirstBlobable<T, Options...>::type, T>, std::optional<T>, typename VariantFirstBlobable<Options...>::type>;
+	};
+#endif
+	template<typename T, typename ...Options>
+	struct VariantFirstBlobable<std::unique_ptr<T>, Options...> {
+		using type = std::conditional_t<std::is_same_v<typename VariantFirstBlobable<T, Options...>::type, T>, std::unique_ptr<T>, typename VariantFirstBlobable<Options...>::type>;
+	};
+	template<typename T, typename A, typename ...Options>
+	struct VariantFirstBlobable<std::enable_if_t<std::is_pod_v<T>>, std::vector<T, A>, Options...> {
+		using type = std::vector<T, A>;
+	};
+	template<typename Callback, typename ...Options>
+	inline auto variant_select_blob(Callback&&callback) {
+		if constexpr(std::is_same_v<typename VariantFirstBlobable<Options...>::type, void>) {
+			throw errors::mismatch("Blob is unsupported by this variant.", "", SQLITE_MISMATCH);
+		} else {
+			std::forward<Callback>(callback)(typename VariantFirstBlobable<Options...>::type());
+		}
+	}
+
+	template<typename ...Options>
+	inline auto variant_select(int type) {
+		return [type](auto &&callback) {
+			using Callback = decltype(callback);
+			switch(type) {
+				case SQLITE_NULL:
+					variant_select_null<Callback, Options...>(std::forward<Callback>(callback));
+					break;
+				case SQLITE_INTEGER:
+					variant_select_integer<Callback, Options...>(std::forward<Callback>(callback));
+					break;
+				case SQLITE_FLOAT:
+					variant_select_float<Callback, Options...>(std::forward<Callback>(callback));
+					break;
+				case SQLITE_TEXT:
+					variant_select_text<Callback, Options...>(std::forward<Callback>(callback));
+					break;
+				case SQLITE_BLOB:
+					variant_select_blob<Callback, Options...>(std::forward<Callback>(callback));
+					break;
+				default:;
+					/* assert(false); */
+			}
+		};
+	}
+}
 
 namespace sqlite {
 
