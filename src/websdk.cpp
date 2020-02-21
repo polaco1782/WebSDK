@@ -1,17 +1,15 @@
-#include "websdk.h"
-#include "backend.h"
-#include <thread>
-#include <functional>
+#include "headers.hpp"
 
 static void on_script_rpc(WebKitUserContentManager *manager, WebKitJavascriptResult *message, void *thisclass)
 {
     auto *cwebview = reinterpret_cast<CWebView *>(thisclass);
     auto *msg = webkit_javascript_result_get_js_value(message);
-    auto value = string(jsc_value_to_string(msg));
+    auto *value = strdup(jsc_value_to_string(msg));
 
     thread([cwebview,value]{
-        auto v1 = value;
+        string v1 = value;
         cwebview->process_request(v1);
+        free(value);
     }).detach();
 }
 
@@ -47,10 +45,18 @@ void WebSDK::httpserver_run()
     {
         crow::SimpleApp app;
 
-        CROW_ROUTE(app, "/json_post").methods("POST"_method)
-        ([this](const crow::request& req)
+        // CROW_ROUTE(app, "/json_post").methods("POST"_method)
+        // ([this](const crow::request& req)
+        // {
+        //     return cwebview->process_request(req.body);
+        // });
+
+        CROW_ROUTE(app,"/<int>")
+        ([this](int count)
         {
-            return cwebview->process_request(req.body);
+
+            cwebview->jsexec_async("alert('"+to_string(count)+"')");
+            return crow::response{"teste "+to_string(count)};
         });
 
         app.port(8080).run();

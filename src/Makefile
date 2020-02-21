@@ -3,7 +3,7 @@ GTK=`pkg-config gtk+-3.0 --cflags`
 GTKMM=`pkg-config gtkmm-3.0 --cflags --libs`
 WEBKITGTK=`pkg-config webkit2gtk-4.0 --cflags --libs`
 
-SRC=main.cpp websdk.cpp backend.cpp
+SRC=main.cpp websdk.cpp backend.cpp cwebview.cpp
 OBJ=$(SRC:.cpp=.o)
 MUJS_DIR=mujs
 MUJS=-Lmujs/build/release -lmujs

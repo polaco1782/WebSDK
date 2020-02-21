@@ -1,6 +1,4 @@
-#include "backend.h"
-#include "sqlite.hpp"
-#include <map>
+#include "headers.hpp"
 
 static const char *require_js =
 	"function require(name) {\n"

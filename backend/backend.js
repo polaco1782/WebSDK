@@ -1,4 +1,4 @@
-require('testfile');
+//require('testfile');
 
 function teste_backend(msg)
 {

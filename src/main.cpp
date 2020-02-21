@@ -1,5 +1,4 @@
-#include "websdk.h"
-#include <gtkmm.h>
+#include "headers.hpp"
 
 int main(int argc, char **argv)
 {
